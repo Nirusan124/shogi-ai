@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#9b6b35">
+<title>将棋AI</title>
+<style>
+*{box-sizing:border-box} body{margin:0;background:#efe6d4;color:#2a2118;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;touch-action:manipulation}
+main{width:min(100%,720px);margin:auto;padding:10px 10px 24px}.top{display:flex;align-items:center;justify-content:space-between;gap:8px}.top h1{font-size:20px;margin:6px 0}.status{min-height:42px;padding:10px;border-radius:10px;background:#fff8ea;text-align:center;font-weight:700;margin:8px 0}
+.boardwrap{width:min(96vw,620px);margin:auto}.board{display:grid;grid-template-columns:repeat(9,1fr);background:#c8954f;border:3px solid #70451f;box-shadow:0 4px 12px #0002}.sq{position:relative;aspect-ratio:1;border:1px solid #8b5c2d;display:flex;align-items:center;justify-content:center;font-size:clamp(23px,7.5vw,48px);cursor:pointer}.sq.sel{background:#f4db72}.sq.target{background:#b8db8b}.sq.last{box-shadow:inset 0 0 0 3px #d46d37}.piece{line-height:1;transform:translateY(-2px)}.gote{transform:rotate(180deg) translateY(2px)}.promoted{font-weight:800}
+.panels{width:min(96vw,620px);margin:10px auto;display:grid;grid-template-columns:1fr 1fr;gap:8px}.hand{background:#fff8ea;border-radius:10px;padding:7px;min-height:52px}.hand b{display:block;font-size:12px}.hand button{margin:2px;padding:5px 7px;font-size:15px;border:1px solid #c9b79b;border-radius:7px;background:#fff;cursor:pointer}.hand button.active{outline:3px solid #e3ad43}
+.controls{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin:10px}.controls button{padding:10px 14px;border:0;border-radius:9px;background:#70451f;color:white;font-weight:700}.controls select{padding:9px;border-radius:8px}
+.help{font-size:12px;color:#625546;text-align:center}
+@media(min-width:700px){.sq{font-size:45px}}
+</style>
+</head>
+<body>
+<main>
+<div class="top"><h1>将棋AI</h1><label>AI強さ <select id="level"><option value="1">1（軽い）</option><option value="2" selected>2（標準）</option><option value="3">3（強め）</option></select></label></div>
+<div id="status" class="status"></div>
+<div class="boardwrap"><div id="board" class="board"><div class="sq"><span class="piece gote">香</span></div><div class="sq"><span class="piece gote">桂</span></div><div class="sq"><span class="piece gote">銀</span></div><div class="sq"><span class="piece gote">金</span></div><div class="sq"><span class="piece gote">玉</span></div><div class="sq"><span class="piece gote">金</span></div><div class="sq"><span class="piece gote">銀</span></div><div class="sq"><span class="piece gote">桂</span></div><div class="sq"><span class="piece gote">香</span></div><div class="sq"></div><div class="sq"><span class="piece gote">飛</span></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"><span class="piece gote">角</span></div><div class="sq"></div><div class="sq"><span class="piece gote">歩</span></div><div class="sq"><span class="piece gote">歩</span></div><div class="sq"><span class="piece gote">歩</span></div><div class="sq"><span class="piece gote">歩</span></div><div class="sq"><span class="piece gote">歩</span></div><div class="sq"><span class="piece gote">歩</span></div><div class="sq"><span class="piece gote">歩</span></div><div class="sq"><span class="piece gote">歩</span></div><div class="sq"><span class="piece gote">歩</span></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"><span class="piece">歩</span></div><div class="sq"><span class="piece">歩</span></div><div class="sq"><span class="piece">歩</span></div><div class="sq"><span class="piece">歩</span></div><div class="sq"><span class="piece">歩</span></div><div class="sq"><span class="piece">歩</span></div><div class="sq"><span class="piece">歩</span></div><div class="sq"><span class="piece">歩</span></div><div class="sq"><span class="piece">歩</span></div><div class="sq"></div><div class="sq"><span class="piece">角</span></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"><span class="piece">飛</span></div><div class="sq"></div><div class="sq"><span class="piece">香</span></div><div class="sq"><span class="piece">桂</span></div><div class="sq"><span class="piece">銀</span></div><div class="sq"><span class="piece">金</span></div><div class="sq"><span class="piece">玉</span></div><div class="sq"><span class="piece">金</span></div><div class="sq"><span class="piece">銀</span></div><div class="sq"><span class="piece">桂</span></div><div class="sq"><span class="piece">香</span></div></div></div>
+<div class="panels"><div id="handP" class="hand"></div><div id="handS" class="hand"></div></div>
+<div class="controls"><button onclick="newGame()">新しい対局</button><button onclick="resign()">投了</button></div>
+<div class="help">あなた＝先手。駒をタップ→移動先をタップ。持ち駒は持ち駒のボタン→盤上のマス。</div>
+</main>
+<script>
+const names={p:"歩",l:"香",n:"桂",s:"銀",g:"金",b:"角",r:"飛",k:"玉"};
+const order=["r","b","g","s","n","l","p"];
+const vals={p:100,l:300,n:320,s:450,g:550,b:800,r:1000,k:100000};
+const init=[
+["l","n","s","g","k","g","s","n","l"],
+["","r","","","","","","b",""],
+["p","p","p","p","p","p","p","p","p"],
+["","","","","","","","",""],
+["","","","","","","","",""],
+["","","","","","","","",""],
+["P","P","P","P","P","P","P","P"],
+["","B","","","","","","R",""],
+["L","N","S","G","K","G","S","N","L"]];
+let B,H,turn,selected=null,dropType=null,lastMove=null,gameOver=false;
+let history=[];
+
+function cloneBoard(b){return b.map(r=>r.slice())}
+function cloneHand(h){return {P:{...h.P},S:{...h.S}}}
+function owner(x){return x?x===x.toUpperCase()?"P":"S":null}
+function base(x){return x.toLowerCase()}
+function promoted(x){return !!x&&x===x.toUpperCase()&&x!="" ? false : false} // promotion is represented separately below
+// Representation: promoted pieces are +p,+l,+n,+s,+b,+r internally; owner is by first letter case.
+function own(x){return x? (x[0]===x[0].toUpperCase()?"P":"S"):null}
+function typ(x){return x?x.toLowerCase().replace("+",""):""}
+function isProm(x){return !!x&&x.includes("+")}
+function makePiece(side,t,p=false){return side==="P"?t.toUpperCase()+(p?"+":""):t+(p?"+":"")}
+function inb(r,c){return r>=0&&r<9&&c>=0&&c<9}
+function zone(side,r){return side==="P"?r<=2:r>=6}
+function mustProm(side,t,r){return (t==="p"&&((side==="P"&&r===0)||(side==="S"&&r===8)))||(t==="l"&&((side==="P"&&r===0)||(side==="S"&&r===8)))||(t==="n"&&((side==="P"&&r<=1)||(side==="S"&&r>=7)))}
+function canProm(side,t,r,fr){return ["p","l","n","s","b","r"].includes(t)&&(zone(side,r)||zone(side,fr))}
+function norm(t){return t.replace("+","")}
+function pieceValue(t){return vals[norm(t)]}
+
+function attacksPseudo(b,fr,fc,tr,tc,x){
+ const side=own(x), t=typ(x), f=side==="P"?-1:1, dr=tr-fr,dc=tc-fc;
+ if(!inb(tr,tc)||own(b[tr][tc])===side)return false;
+ if(isProm(x)&&["p","l","n","s"].includes(t)) t="g";
+ if(t==="p")return dr===f&&dc===0;
+ if(t==="g")return (dr===f&&Math.abs(dc)<=1)||(dr===0&&Math.abs(dc)===1)||(dr===-f&&dc===0);
+ if(t==="s")return (dr===f&&Math.abs(dc)<=1)||(dr===-f&&Math.abs(dc)===1);
+ if(t==="k")return Math.max(Math.abs(dr),Math.abs(dc))===1;
+ if(t==="n")return dr===2*f&&Math.abs(dc)===1;
+ if(t==="l"){if(dc!==0||dr*f<=0)return false;return rayClear(b,fr,fc,tr,tc)}
+ if(t==="r"){if(dr!==0&&dc!==0)return false;return rayClear(b,fr,fc,tr,tc)}
+ if(t==="b"){if(Math.abs(dr)!==Math.abs(dc))return false;return rayClear(b,fr,fc,tr,tc)}
+ if(isProm(x)&&t==="r")return Math.max(Math.abs(dr),Math.abs(dc))===1 || (dr===0||dc===0)&&rayClear(b,fr,fc,tr,tc)
+ if(isProm(x)&&t==="b")return Math.max(Math.abs(dr),Math.abs(dc))===1 || (Math.abs(dr)===Math.abs(dc)&&rayClear(b,fr,fc,tr,tc))
+ return false
+}
+function rayClear(b,r,c,tr,tc){let sr=Math.sign(tr-r),sc=Math.sign(tc-c),rr=r+sr,cc=c+sc;while(rr!==tr||cc!==tc){if(b[rr][cc])return false;rr+=sr;cc+=sc}return true}
+
+function findKing(b,side){for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(b[r][c]===makePiece(side,"k"))return [r,c];return null}
+function inCheck(b,side){
+ const k=findKing(b,side); if(!k)return true;
+ const opp=side==="P"?"S":"P";
+ for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(own(b[r][c])===opp&&attacksPseudo(b,r,c,k[0],k[1],b[r][c]))return true;
+ return false
+}
+
+function pseudoBoardMoves(b,h,side,includeDrops=true){
+ const ms=[];
+ for(let r=0;r<9;r++)for(let c=0;c<9;c++){
+  const x=b[r][c]; if(own(x)!==side)continue;
+  for(let tr=0;tr<9;tr++)for(let tc=0;tc<9;tc++)if(attacksPseudo(b,r,c,tr,tc,x)){
+   const t=typ(x), promoOpts=canProm(side,t,r,tr);
+   if(mustProm(side,t,tr)) ms.push({kind:"move",r,c,tr,tc,prom:true});
+   else {ms.push({kind:"move",r,c,tr,tc,prom:false}); if(promoOpts)ms.push({kind:"move",r,c,tr,tc,prom:true});}
+  }
+ }
+ if(includeDrops){
+  for(const t of order)if((h[side][t]||0)>0){
+   for(let r=0;r<9;r++)for(let c=0;c<9;c++){
+    if(b[r][c])continue;
+    if((t==="p"||t==="l")&&((side==="P"&&r===0)||(side==="S"&&r===8)))continue;
+    if(t==="n"&&((side==="P"&&r<=1)||(side==="S"&&r>=7)))continue;
+    if(t==="p"){
+      let exists=false;for(let rr=0;rr<9;rr++)if(norm(b[rr][c])==="p"&&own(b[rr][c])===side&&!isProm(b[rr][c])){exists=true;break}
+      if(exists)continue;
+    }
+    ms.push({kind:"drop",t,r,c});
+   }
+  }
+ }
+ return ms;
+}
+function applyMove(state,m){
+ const b=state.b,h=state.h,side=state.side;
+ if(m.kind==="drop"){b[m.r][m.c]=makePiece(side,m.t);h[side][m.t]--;return}
+ const x=b[m.r][m.c], cap=b[m.tr][m.tc];
+ if(cap){const ct=norm(typ(cap));h[side][ct]=(h[side][ct]||0)+1}
+ b[m.r][m.c]=""; b[m.tr][m.tc]=makePiece(side,typ(x),m.prom)
+}
+function legalMoves(state,side=state.side){
+ const raw=pseudoBoardMoves(state.b,state.h,side,true), out=[];
+ for(const m of raw){
+  const ns={b:cloneBoard(state.b),h:cloneHand(state.h),side};
+  applyMove(ns,m);
+  if(!inCheck(ns.b,side))out.push(m);
+ }
+ return out;
+}
+function keyState(b,h,side){
+ return JSON.stringify([b,h,side]);
+}
+function givesCheck(state,m){
+ const ns={b:cloneBoard(state.b),h:cloneHand(state.h),side:state.side};applyMove(ns,m);
+ return inCheck(ns.b,state.side==="P"?"S":"P");
+}
+function moveKey(m){return JSON.stringify(m)}
+
+function nifu(b,side,c){for(let r=0;r<9;r++){let x=b[r][c];if(own(x)===side&&norm(x)==="p"&&!isProm(x))return true}return false}
+function isPawnDropMate(state,m){
+ if(m.kind!=="drop"||m.t!=="p")return false;
+ const ns={b:cloneBoard(state.b),h:cloneHand(state.h),side:state.side};applyMove(ns,m);
+ const opp=state.side==="P"?"S":"P";
+ if(!inCheck(ns.b,opp))return false;
+ return legalMoves(ns,opp).length===0;
+}
+function legalMovesFull(state,side=state.side){
+ return legalMoves(state,side).filter(m=>!isPawnDropMate(state,m));
+}
+
+function render(){
+ const board=document.getElementById("board");board.innerHTML="";
+ const lm=(turn==="P"&&!gameOver)?legalMovesFull({b:B,h:H,side:turn},turn):[];
+ for(let r=0;r<9;r++)for(let c=0;c<9;c++){
+  const d=document.createElement("div");d.className="sq";
+  if(lastMove && ((lastMove.kind==="move"&&(lastMove.r===r&&lastMove.c===c||lastMove.tr===r&&lastMove.tc===c))||(lastMove.kind==="drop"&&lastMove.r===r&&lastMove.c===c)))d.classList.add("last");
+  if(selected&&selected.r===r&&selected.c===c)d.classList.add("sel");
+  if(dropType&&lm.some(m=>m.kind==="drop"&&m.r===r&&m.c===c&&m.t===dropType))d.classList.add("target");
+  if(selected&&lm.some(m=>m.kind==="move"&&m.r===selected.r&&m.c===selected.c&&m.tr===r&&m.tc===c))d.classList.add("target");
+  const x=B[r][c];if(x){const sp=document.createElement("span");sp.className="piece"+(own(x)==="S"?" gote":"")+(isProm(x)?" promoted":"");sp.textContent=isProm(x)?"成"+names[typ(x)]:names[typ(x)];d.appendChild(sp)}
+  d.onclick=()=>tap(r,c);board.appendChild(d);
+ }
+ renderHand("P","handP");renderHand("S","handS");
+}
+function renderHand(side,id){
+ const el=document.getElementById(id);el.innerHTML=`<b>${side==="P"?"☗ あなたの持ち駒":"☖ AIの持ち駒"}</b>`;
+ for(const t of order){const n=H[side][t]||0;if(n){const btn=document.createElement("button");btn.textContent=names[t]+(n>1?"×"+n:"");if(side==="P"&&dropType===t)btn.classList.add("active");btn.onclick=()=>{if(turn==="P"&&!gameOver){selected=null;dropType=dropType===t?null:t;render()}};el.appendChild(btn)}}
+}
+function tap(r,c){
+ if(gameOver||turn!=="P")return;
+ const lm=legalMovesFull({b:B,h:H,side:"P"},"P");
+ if(dropType){
+   const m=lm.find(x=>x.kind==="drop"&&x.t===dropType&&x.r===r&&x.c===c);
+   if(m){doHuman(m);return}
+   if(B[r][c]&&own(B[r][c])==="P"){dropType=null;selected={r,c};render();return}
+ }
+ if(selected){
+   const m=lm.find(x=>x.kind==="move"&&x.r===selected.r&&x.c===selected.c&&x.tr===r&&x.tc===c);
+   if(m){ if(canProm("P",typ(B[selected.r][selected.c]),selected.r,r)&&!mustProm("P",typ(B[selected.r][selected.c]),r)) {
+      const promote=confirm("成りますか？\nOK＝成る / キャンセル＝成らない");m.prom=promote;
+    } doHuman(m);return}
+ }
+ if(B[r][c]&&own(B[r][c])==="P"){selected={r,c};dropType=null;render()}
+}
+function doHuman(m){
+ const st={b:B,h:H,side:"P"};applyMove(st,m);B=st.b;H=st.h;lastMove=m;selected=null;dropType=null;
+ history.push(keyState(B,H,"S"));render();
+ const next=legalMovesFull({b:B,h:H,side:"S"},"S");
+ if(!findKing(B,"S"))return finish("あなたの勝ち！");
+ if(next.length===0)return finish(inCheck(B,"S")?"あなたの勝ち（詰み）！":"持将棋・手詰まり");
+ setStatus("AIが考えています…");setTimeout(aiTurn,80);
+}
+function evaluate(state){
+ let s=0;
+ for(let r=0;r<9;r++)for(let c=0;c<9;c++){const x=state.b[r][c];if(x){let v=pieceValue(x);if(isProm(x))v+= x.toLowerCase()==="+"?0:Math.round(v*.5);s+=(own(x)==="S"?v:-v)}}
+ for(const side of ["P","S"])for(const t of order)s+=(side==="S"?1:-1)*(state.h[side][t]||0)*pieceValue(t)*0.9;
+ if(inCheck(state.b,"P"))s+=200;if(inCheck(state.b,"S"))s-=200;
+ return s;
+}
+function search(state,depth,alpha,beta,maximizing){
+ if(depth<=0)return evaluate(state);
+ const side=maximizing?"S":"P", ms=legalMovesFull(state,side);
+ if(!ms.length)return inCheck(state.b,side)?(maximizing?-999999:999999):0;
+ let best=maximizing?-Infinity:Infinity;
+ for(const m of orderMoves(state,ms)){
+  const ns={b:cloneBoard(state.b),h:cloneHand(state.h),side};
+  applyMove(ns,m);const v=search(ns,depth-1,alpha,beta,!maximizing);
+  if(maximizing){best=Math.max(best,v);alpha=Math.max(alpha,v)}else{best=Math.min(best,v);beta=Math.min(beta,v)}
+  if(beta<=alpha)break;
+ }
+ return best;
+}
+function orderMoves(state,ms){
+ return ms.slice().sort((a,b)=>{
+  const capA=a.kind==="move"&&state.b[a.tr]?.[a.tc]?pieceValue(state.b[a.tr][a.tc]):0;
+  const capB=b.kind==="move"&&state.b[b.tr]?.[b.tc]?pieceValue(state.b[b.tr][b.tc]):0;
+  return capB-capA;
+ });
+}
+function aiTurn(){
+ if(gameOver)return;
+ const state={b:B,h:H,side:"S"},ms=legalMovesFull(state,"S");
+ if(!ms.length)return finish(inCheck(B,"S")?"あなたの勝ち（詰み）！":"持将棋・手詰まり");
+ let depth=Number(document.getElementById("level").value);
+ let best=-Infinity,bm=ms[0];
+ for(const m of orderMoves(state,ms)){
+   const ns={b:cloneBoard(B),h:cloneHand(H),side:"S"};applyMove(ns,m);
+   const v=search(ns,Math.max(0,depth-1),-Infinity,Infinity,false);
+   if(v>best){best=v;bm=m}
+ }
+ applyMove(state,bm);B=state.b;H=state.h;lastMove=bm;turn="P";history.push(keyState(B,H,"P"));
+ if(!findKing(B,"P"))return finish("AIの勝ち！");
+ const next=legalMovesFull({b:B,h:H,side:"P"},"P");
+ if(next.length===0)return finish(inCheck(B,"P")?"AIの勝ち（詰み）！":"持将棋・手詰まり");
+ // 4回同一局面なら千日手（連続王手の千日手の細則は簡略化）
+ const k=keyState(B,H,"P"), count=history.filter(x=>x===k).length;
+ if(count>=4)return finish("千日手です");
+ setStatus(inCheck(B,"P")?"王手されています":"あなたの手番");
+ render();
+}
+function setStatus(s){document.getElementById("status").textContent=s}
+function finish(s){gameOver=true;setStatus(s);render()}
+function resign(){if(!gameOver)finish("投了：AIの勝ち")}
+function newGame(){
+ B=cloneBoard(init);H={P:{},S:{}};turn="P";selected=null;dropType=null;lastMove=null;gameOver=false;history=[keyState(B,H,"P")];setStatus("あなたの手番");render()
+}
+newGame();
+</script>
+</body>
+</html>
