@@ -21,7 +21,7 @@ main{width:min(100%,720px);margin:auto;padding:10px 10px 24px}.top{display:flex;
 <div id="status" class="status"></div>
 <div class="boardwrap"><div id="board" class="board"><div class="sq"><span class="piece gote">香</span></div><div class="sq"><span class="piece gote">桂</span></div><div class="sq"><span class="piece gote">銀</span></div><div class="sq"><span class="piece gote">金</span></div><div class="sq"><span class="piece gote">玉</span></div><div class="sq"><span class="piece gote">金</span></div><div class="sq"><span class="piece gote">銀</span></div><div class="sq"><span class="piece gote">桂</span></div><div class="sq"><span class="piece gote">香</span></div><div class="sq"></div><div class="sq"><span class="piece gote">飛</span></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"><span class="piece gote">角</span></div><div class="sq"></div><div class="sq"><span class="piece gote">歩</span></div><div class="sq"><span class="piece gote">歩</span></div><div class="sq"><span class="piece gote">歩</span></div><div class="sq"><span class="piece gote">歩</span></div><div class="sq"><span class="piece gote">歩</span></div><div class="sq"><span class="piece gote">歩</span></div><div class="sq"><span class="piece gote">歩</span></div><div class="sq"><span class="piece gote">歩</span></div><div class="sq"><span class="piece gote">歩</span></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"><span class="piece">歩</span></div><div class="sq"><span class="piece">歩</span></div><div class="sq"><span class="piece">歩</span></div><div class="sq"><span class="piece">歩</span></div><div class="sq"><span class="piece">歩</span></div><div class="sq"><span class="piece">歩</span></div><div class="sq"><span class="piece">歩</span></div><div class="sq"><span class="piece">歩</span></div><div class="sq"><span class="piece">歩</span></div><div class="sq"></div><div class="sq"><span class="piece">角</span></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"></div><div class="sq"><span class="piece">飛</span></div><div class="sq"></div><div class="sq"><span class="piece">香</span></div><div class="sq"><span class="piece">桂</span></div><div class="sq"><span class="piece">銀</span></div><div class="sq"><span class="piece">金</span></div><div class="sq"><span class="piece">玉</span></div><div class="sq"><span class="piece">金</span></div><div class="sq"><span class="piece">銀</span></div><div class="sq"><span class="piece">桂</span></div><div class="sq"><span class="piece">香</span></div></div></div>
 <div class="panels"><div id="handP" class="hand"></div><div id="handS" class="hand"></div></div>
-<div class="controls"><button onclick="newGame()">新しい対局</button><button onclick="resign()">投了</button></div>
+<div class="controls"><button id="newGameBtn">新しい対局</button><button id="resignBtn">投了</button></div>
 <div class="help">あなた＝先手。駒をタップ→移動先をタップ。持ち駒は持ち駒のボタン→盤上のマス。</div>
 </main>
 <script>
@@ -161,7 +161,7 @@ function render(){
   if(dropType&&lm.some(m=>m.kind==="drop"&&m.r===r&&m.c===c&&m.t===dropType))d.classList.add("target");
   if(selected&&lm.some(m=>m.kind==="move"&&m.r===selected.r&&m.c===selected.c&&m.tr===r&&m.tc===c))d.classList.add("target");
   const x=B[r][c];if(x){const sp=document.createElement("span");sp.className="piece"+(own(x)==="S"?" gote":"")+(isProm(x)?" promoted":"");sp.textContent=isProm(x)?"成"+names[typ(x)]:names[typ(x)];d.appendChild(sp)}
-  d.onclick=()=>tap(r,c);board.appendChild(d);
+  d.dataset.r=String(r);d.dataset.c=String(c);board.appendChild(d);
  }
  renderHand("P","handP");renderHand("S","handS");
 }
@@ -180,7 +180,9 @@ function tap(r,c){
  if(selected){
    const m=lm.find(x=>x.kind==="move"&&x.r===selected.r&&x.c===selected.c&&x.tr===r&&x.tc===c);
    if(m){ if(canProm("P",typ(B[selected.r][selected.c]),selected.r,r)&&!mustProm("P",typ(B[selected.r][selected.c]),r)) {
-      const promote=confirm("成りますか？\nOK＝成る / キャンセル＝成らない");m.prom=promote;
+      pendingPromotion=m;
+      renderPromotionChoice();
+      return;
     } doHuman(m);return}
  }
  if(B[r][c]&&own(B[r][c])==="P"){selected={r,c};dropType=null;render()}
@@ -257,6 +259,22 @@ function resign(){if(!gameOver)finish("投了：AIの勝ち")}
 function newGame(){
  B=cloneBoard(init);H={P:{},S:{}};turn="P";selected=null;dropType=null;lastMove=null;gameOver=false;pendingPromotion=null;history=[keyState(B,H,"P")];setStatus("あなたの手番");render()
 }
+const boardEl=document.getElementById("board");
+boardEl.addEventListener("click",(ev)=>{
+  const sq=ev.target.closest(".sq");
+  if(!sq || !boardEl.contains(sq)) return;
+  const r=Number(sq.dataset.r), c=Number(sq.dataset.c);
+  if(Number.isInteger(r)&&Number.isInteger(c)) tap(r,c);
+});
+document.getElementById("newGameBtn").addEventListener("click",()=>newGame());
+document.getElementById("resignBtn").addEventListener("click",()=>resign());
+
+window.addEventListener("error",(ev)=>{
+  const st=document.getElementById("status");
+  if(st) st.textContent="JavaScriptエラーが発生しました。ページを再読み込みしてください。";
+  console.error(ev.error || ev.message);
+});
+
 newGame();
 </script>
 </body>
