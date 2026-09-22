@@ -38,7 +38,7 @@ const init=[
 ["P","P","P","P","P","P","P","P"],
 ["","B","","","","","","R",""],
 ["L","N","S","G","K","G","S","N","L"]];
-let B,H,turn,selected=null,dropType=null,lastMove=null,gameOver=false;
+let B,H,turn,selected=null,dropType=null,lastMove=null,gameOver=false,pendingPromotion=null;
 let history=[];
 
 function cloneBoard(b){return b.map(r=>r.slice())}
@@ -68,10 +68,14 @@ function attacksPseudo(b,fr,fc,tr,tc,x){
  if(t==="k")return Math.max(Math.abs(dr),Math.abs(dc))===1;
  if(t==="n")return dr===2*f&&Math.abs(dc)===1;
  if(t==="l"){if(dc!==0||dr*f<=0)return false;return rayClear(b,fr,fc,tr,tc)}
- if(t==="r"){if(dr!==0&&dc!==0)return false;return rayClear(b,fr,fc,tr,tc)}
- if(t==="b"){if(Math.abs(dr)!==Math.abs(dc))return false;return rayClear(b,fr,fc,tr,tc)}
- if(isProm(x)&&t==="r")return Math.max(Math.abs(dr),Math.abs(dc))===1 || (dr===0||dc===0)&&rayClear(b,fr,fc,tr,tc)
- if(isProm(x)&&t==="b")return Math.max(Math.abs(dr),Math.abs(dc))===1 || (Math.abs(dr)===Math.abs(dc)&&rayClear(b,fr,fc,tr,tc))
+ if(t==="r"){
+   if(isProm(x)&&Math.max(Math.abs(dr),Math.abs(dc))===1)return true;
+   if(dr!==0&&dc!==0)return false; return rayClear(b,fr,fc,tr,tc)
+ }
+ if(t==="b"){
+   if(isProm(x)&&Math.max(Math.abs(dr),Math.abs(dc))===1)return true;
+   if(Math.abs(dr)!==Math.abs(dc))return false; return rayClear(b,fr,fc,tr,tc)
+ }
  return false
 }
 function rayClear(b,r,c,tr,tc){let sr=Math.sign(tr-r),sc=Math.sign(tc-c),rr=r+sr,cc=c+sc;while(rr!==tr||cc!==tc){if(b[rr][cc])return false;rr+=sr;cc+=sc}return true}
@@ -191,7 +195,7 @@ function doHuman(m){
 }
 function evaluate(state){
  let s=0;
- for(let r=0;r<9;r++)for(let c=0;c<9;c++){const x=state.b[r][c];if(x){let v=pieceValue(x);if(isProm(x))v+= x.toLowerCase()==="+"?0:Math.round(v*.5);s+=(own(x)==="S"?v:-v)}}
+ for(let r=0;r<9;r++)for(let c=0;c<9;c++){const x=state.b[r][c];if(x){let v=pieceValue(x);if(isProm(x))v+=Math.round(v*.5);s+=(own(x)==="S"?v:-v)}}
  for(const side of ["P","S"])for(const t of order)s+=(side==="S"?1:-1)*(state.h[side][t]||0)*pieceValue(t)*0.9;
  if(inCheck(state.b,"P"))s+=200;if(inCheck(state.b,"S"))s-=200;
  return s;
@@ -238,10 +242,20 @@ function aiTurn(){
  render();
 }
 function setStatus(s){document.getElementById("status").textContent=s}
+function renderPromotionChoice(){
+ const st=document.getElementById("status");
+ st.innerHTML="成りますか？　<button onclick="choosePromotion(true)">成る</button><button onclick="choosePromotion(false)">成らない</button>";
+}
+function choosePromotion(v){
+ if(!pendingPromotion)return;
+ pendingPromotion.prom=!!v;
+ const m=pendingPromotion; pendingPromotion=null;
+ doHuman(m);
+}
 function finish(s){gameOver=true;setStatus(s);render()}
 function resign(){if(!gameOver)finish("投了：AIの勝ち")}
 function newGame(){
- B=cloneBoard(init);H={P:{},S:{}};turn="P";selected=null;dropType=null;lastMove=null;gameOver=false;history=[keyState(B,H,"P")];setStatus("あなたの手番");render()
+ B=cloneBoard(init);H={P:{},S:{}};turn="P";selected=null;dropType=null;lastMove=null;gameOver=false;pendingPromotion=null;history=[keyState(B,H,"P")];setStatus("あなたの手番");render()
 }
 newGame();
 </script>
